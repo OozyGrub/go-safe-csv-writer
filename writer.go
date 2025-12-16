@@ -16,7 +16,9 @@ type SafetyOpts struct {
 	EscapeCharMinus   bool
 	EscapeCharAt      bool
 	EscapeCharTab     bool
-	EscapeCharCR      bool
+	EscapeCharCR      bool // Escapes 0x0D (Carriage Return, '\r')
+	EscapeCharLF      bool // Escapes 0x0A (Line Feed, '\n')
+	OWASPSanitize     bool // Prepend single quote to dangerous fields only
 }
 
 var FullSafety = SafetyOpts{
@@ -27,6 +29,8 @@ var FullSafety = SafetyOpts{
 	EscapeCharAt:      true,
 	EscapeCharTab:     true,
 	EscapeCharCR:      true,
+	EscapeCharLF:      true,
+	OWASPSanitize:     false,
 }
 
 var EscapeAll = SafetyOpts{
@@ -37,6 +41,16 @@ var EscapeAll = SafetyOpts{
 	EscapeCharAt:      true,
 	EscapeCharTab:     true,
 	EscapeCharCR:      true,
+	EscapeCharLF:      true,
+	OWASPSanitize:     false,
+}
+
+// OWASPSafe provides OWASP-compliant CSV injection prevention.
+// It wraps all fields in double quotes and prepends a single quote
+// to fields that contain dangerous characters or bypass patterns.
+var OWASPSafe = SafetyOpts{
+	ForceDoubleQuotes: true,
+	OWASPSanitize:     true,
 }
 
 // A SafeWriter writes records using CSV encoding.
@@ -89,7 +103,14 @@ func (w *SafeWriter) Write(record []string) error {
 		}
 
 		if len(field) > 0 {
+			// OWASP-compliant sanitization: prepend single quote to dangerous fields
+			if w.opts.OWASPSanitize && w.isDangerousField(field) {
+				field = "'" + field
+			}
+
 			// ADDED BY @samber ON 2024-12-05
+			// Legacy escaping: prepend space to fields starting with dangerous chars
+			// Note: This is applied after OWASP sanitization if both are enabled
 			switch {
 			case w.opts.EscapeCharEqual && field[0] == '=':
 				field = " " + field
@@ -101,7 +122,9 @@ func (w *SafeWriter) Write(record []string) error {
 				field = " " + field
 			case w.opts.EscapeCharTab && field[0] == '\t':
 				field = " " + field
-			case w.opts.EscapeCharCR && field[0] == '\n':
+			case w.opts.EscapeCharCR && field[0] == '\r':
+				field = " " + field
+			case w.opts.EscapeCharLF && field[0] == '\n':
 				field = " " + field
 			}
 		}
@@ -240,3 +263,51 @@ func validDelim(r rune) bool {
 }
 
 var errInvalidDelim = errors.New("csv: invalid field or comment delimiter")
+
+// isDangerousChar checks if a character is a dangerous CSV injection character
+func isDangerousChar(c byte) bool {
+	return c == '=' || c == '+' || c == '-' || c == '@' || c == '\t' || c == '\r' || c == '\n'
+}
+
+// isDangerousField checks if a field is dangerous and needs OWASP sanitization.
+// A field is dangerous if:
+// 1. It starts with a dangerous character (=, +, -, @, \t, \r, \n)
+// 2. It contains a bypass pattern: quote/separator followed by dangerous character
+func (w *SafeWriter) isDangerousField(field string) bool {
+	if len(field) == 0 {
+		return false
+	}
+
+	// Condition 1: Field starts with dangerous character
+	if isDangerousChar(field[0]) {
+		return true
+	}
+
+	// Condition 2: Check for bypass patterns
+	// Pattern 1: quote + separator + quote + dangerous char (e.g., ","=)
+	// This breaks out of quoted field: "hello","=FORMULA" becomes field1="hello", field2="=FORMULA"
+	commaStr := string(w.Comma)
+	pattern1 := `"` + commaStr + `"`
+
+	// Pattern 2: escaped quote followed by dangerous char (e.g., ""=)
+	pattern2 := `""`
+
+	// Check for pattern: ","=, ","+, etc. (quote + comma + quote + dangerous char)
+	if idx := strings.Index(field, pattern1); idx >= 0 {
+		// Check character after the closing quote
+		nextIdx := idx + len(pattern1)
+		if nextIdx < len(field) && isDangerousChar(field[nextIdx]) {
+			return true
+		}
+	}
+
+	// Check for pattern: ""=, ""+, etc. (escaped quote followed by dangerous char)
+	if idx := strings.Index(field, pattern2); idx >= 0 {
+		nextIdx := idx + len(pattern2)
+		if nextIdx < len(field) && isDangerousChar(field[nextIdx]) {
+			return true
+		}
+	}
+
+	return false
+}
