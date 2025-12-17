@@ -1,4 +1,3 @@
-
 # Safe CSV writer
 
 [![tag](https://img.shields.io/github/tag/samber/go-safe-csv-writer.svg)](https://github.com/samber/go-safe-csv-writer/releases)
@@ -58,6 +57,7 @@ This library now supports **OWASP-compliant CSV injection prevention** using the
 - Escapes double quotes using an additional double quote
 
 **Dangerous fields** are detected when:
+
 1. Field starts with dangerous characters: `=`, `+`, `-`, `@`, `\t`, `\r`, `\n`
 2. Field contains bypass patterns: quote/separator followed by dangerous character (e.g., `","=`, `";"=`)
 
@@ -128,9 +128,9 @@ type SafetyOpts struct {
     EscapeCharMinus   bool
     EscapeCharAt      bool
     EscapeCharTab     bool
-    EscapeCharCR      bool // Note: Currently escapes '\n' (LF), not '\r' (CR)
+    EscapeCharCR      bool // Escapes 0x0D (Carriage Return, '\r')
     EscapeCharLF      bool // Escapes 0x0A (Line Feed, '\n')
-    OWASPSanitize     bool // Prepend single quote to dangerous fields only (OWASP-compliant)
+    PrependSingleQuote bool // Prepend single quote to dangerous fields only
 }
 ```
 
@@ -140,9 +140,10 @@ type SafetyOpts struct {
 // OWASPSafe provides OWASP-compliant CSV injection prevention.
 // It wraps all fields in double quotes and prepends a single quote
 // to fields that contain dangerous characters or bypass patterns.
+// See https://owasp.org/www-community/attacks/CSV_Injection
 var OWASPSafe = SafetyOpts{
 	ForceDoubleQuotes: true,
-	OWASPSanitize:     true,
+	PrependSingleQuote: true,
 }
 
 var FullSafety = SafetyOpts{
@@ -153,8 +154,8 @@ var FullSafety = SafetyOpts{
 	EscapeCharAt:      true,
 	EscapeCharTab:     true,
 	EscapeCharCR:      true,
-	EscapeCharLF:      false,
-	OWASPSanitize:     false,
+	EscapeCharLF:      true,
+	PrependSingleQuote: false,
 }
 
 var EscapeAll = SafetyOpts{
@@ -165,8 +166,8 @@ var EscapeAll = SafetyOpts{
 	EscapeCharAt:      true,
 	EscapeCharTab:     true,
 	EscapeCharCR:      true,
-	EscapeCharLF:      false,
-	OWASPSanitize:     false,
+	EscapeCharLF:      true,
+	PrependSingleQuote: false,
 }
 ```
 

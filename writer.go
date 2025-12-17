@@ -10,47 +10,48 @@ import (
 )
 
 type SafetyOpts struct {
-	ForceDoubleQuotes bool
-	EscapeCharEqual   bool
-	EscapeCharPlus    bool
-	EscapeCharMinus   bool
-	EscapeCharAt      bool
-	EscapeCharTab     bool
-	EscapeCharCR      bool // Escapes 0x0D (Carriage Return, '\r')
-	EscapeCharLF      bool // Escapes 0x0A (Line Feed, '\n')
-	OWASPSanitize     bool // Prepend single quote to dangerous fields only
+	ForceDoubleQuotes  bool
+	EscapeCharEqual    bool
+	EscapeCharPlus     bool
+	EscapeCharMinus    bool
+	EscapeCharAt       bool
+	EscapeCharTab      bool
+	EscapeCharCR       bool // Escapes 0x0D (Carriage Return, '\r')
+	EscapeCharLF       bool // Escapes 0x0A (Line Feed, '\n')
+	PrependSingleQuote bool // Prepend single quote to dangerous fields only
 }
 
 var FullSafety = SafetyOpts{
-	ForceDoubleQuotes: true,
-	EscapeCharEqual:   true,
-	EscapeCharPlus:    true,
-	EscapeCharMinus:   true,
-	EscapeCharAt:      true,
-	EscapeCharTab:     true,
-	EscapeCharCR:      true,
-	EscapeCharLF:      true,
-	OWASPSanitize:     false,
+	ForceDoubleQuotes:  true,
+	EscapeCharEqual:    true,
+	EscapeCharPlus:     true,
+	EscapeCharMinus:    true,
+	EscapeCharAt:       true,
+	EscapeCharTab:      true,
+	EscapeCharCR:       true,
+	EscapeCharLF:       true,
+	PrependSingleQuote: false,
 }
 
 var EscapeAll = SafetyOpts{
-	ForceDoubleQuotes: false,
-	EscapeCharEqual:   true,
-	EscapeCharPlus:    true,
-	EscapeCharMinus:   true,
-	EscapeCharAt:      true,
-	EscapeCharTab:     true,
-	EscapeCharCR:      true,
-	EscapeCharLF:      true,
-	OWASPSanitize:     false,
+	ForceDoubleQuotes:  false,
+	EscapeCharEqual:    true,
+	EscapeCharPlus:     true,
+	EscapeCharMinus:    true,
+	EscapeCharAt:       true,
+	EscapeCharTab:      true,
+	EscapeCharCR:       true,
+	EscapeCharLF:       true,
+	PrependSingleQuote: false,
 }
 
 // OWASPSafe provides OWASP-compliant CSV injection prevention.
 // It wraps all fields in double quotes and prepends a single quote
 // to fields that contain dangerous characters or bypass patterns.
+// See https://owasp.org/www-community/attacks/CSV_Injection
 var OWASPSafe = SafetyOpts{
-	ForceDoubleQuotes: true,
-	OWASPSanitize:     true,
+	ForceDoubleQuotes:  true,
+	PrependSingleQuote: true,
 }
 
 // A SafeWriter writes records using CSV encoding.
@@ -104,7 +105,7 @@ func (w *SafeWriter) Write(record []string) error {
 
 		if len(field) > 0 {
 			// OWASP-compliant sanitization: prepend single quote to dangerous fields
-			if w.opts.OWASPSanitize && w.isDangerousField(field) {
+			if w.opts.PrependSingleQuote && w.isDangerousField(field) {
 				field = "'" + field
 			}
 

@@ -168,7 +168,7 @@ func TestFullSafety(t *testing.T) {
 	is.True(FullSafety.EscapeCharTab)
 	is.True(FullSafety.EscapeCharCR)
 	is.True(FullSafety.EscapeCharLF)
-	is.False(FullSafety.OWASPSanitize)
+	is.False(FullSafety.PrependSingleQuote)
 }
 
 func TestEscapeAll(t *testing.T) {
@@ -183,7 +183,7 @@ func TestEscapeAll(t *testing.T) {
 	is.True(EscapeAll.EscapeCharTab)
 	is.True(EscapeAll.EscapeCharCR)
 	is.True(EscapeAll.EscapeCharLF)
-	is.False(EscapeAll.OWASPSanitize)
+	is.False(EscapeAll.PrependSingleQuote)
 }
 
 func TestOWASPSafe(t *testing.T) {
@@ -191,7 +191,7 @@ func TestOWASPSafe(t *testing.T) {
 
 	is.NotEmpty(OWASPSafe)
 	is.True(OWASPSafe.ForceDoubleQuotes)
-	is.True(OWASPSafe.OWASPSanitize)
+	is.True(OWASPSafe.PrependSingleQuote)
 }
 
 func TestOWASPSanitization(t *testing.T) {
