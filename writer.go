@@ -49,6 +49,7 @@ var EscapeAll = SafetyOpts{
 // It wraps all fields in double quotes and prepends a single quote
 // to fields that contain dangerous characters or bypass patterns.
 // See https://owasp.org/www-community/attacks/CSV_Injection
+// See https://owasp.org/www-community/attacks/CSV_Injection
 var OWASPSafe = SafetyOpts{
 	ForceDoubleQuotes:  true,
 	PrependSingleQuote: true,
